@@ -1,0 +1,252 @@
+* Initialization
+** Package
+Setup package management - get use-package to work
+*** Add package archives to package-archives
+#+BEGIN_SRC emacs-lisp
+(require 'package)
+
+(defvar gnu '("gnu" . "https://elpa.gnu.org/packages/"))
+(defvar melpa '("melpa" . "https://melpa.org/packages/"))
+(defvar melpa-stable '("melpa-stable" . "https://stable.melpa.org/packages/"))
+(defvar org-elpa '("org" . "http://orgmode.org/elpa/"))
+
+(setq package-archives nil)
+(add-to-list 'package-archives melpa-stable t)
+(add-to-list 'package-archives melpa t)
+(add-to-list 'package-archives gnu t)
+(add-to-list 'package-archives org-elpa t)
+#+END_SRC
+
+package-archives is set to nil to avoid using the default
+HTTP GNU package archive instead of HTTPS.
+
+*** Initialize archives
+Initialize archives and refresh contents if there is no cached archive
+
+#+BEGIN_SRC emacs-lisp
+(package-initialize)
+
+(unless (and (file-exists-p (concat init-dir "elpa/archives/gnu"))
+             (file-exists-p (concat init-dir "elpa/archives/melpa"))
+             (file-exists-p (concat init-dir "elpa/archives/melpa-stable")))
+  (package-refresh-contents))
+#+END_SRC
+
+*** Install use-package
+
+Install use-package if it is not already installed
+
+#+BEGIN_SRC emacs-lisp
+  (when (not (package-installed-p 'use-package))
+    (package-install 'use-package))
+#+END_SRC
+
+Load use-package
+
+#+BEGIN_SRC emacs-lisp
+(require 'use-package)
+#+END_SRC
+
+*** Macros
+Use package with :ensure t automatically enabled
+
+#+BEGIN_SRC emacs-lisp
+  (defmacro ensure-package (name &rest args)
+    `(use-package
+       ,name
+       :ensure t
+       ,@args))
+#+END_SRC
+
+* Features
+** Evil
+Setup vim keybindings for emacs.
+
+Install evil
+
+#+BEGIN_SRC emacs-lisp
+  (ensure-package evil
+                  :init
+                  (setq evil-want-C-u-scroll t
+                        evil-want-C-d-scroll t
+                        evil-want-Y-yank-to-eol t
+                        evil-symbol-word-search t)
+                  :config (evil-mode 1))
+#+END_SRC
+
+** Ivy + Counsel + Swiper
+Completion for emacs
+*** Installation
+Install counsel and get it working - counsel includes
+ivy (completion framework), counsel (additional functions for ivy)
+and swiper (alternative to isearch that shows all matches)
+
+#+BEGIN_SRC emacs-lisp
+  (ensure-package counsel
+                  :config
+                  (ivy-mode 1)
+                  (setq ivy-use-virtual-buffers t)
+                  :bind
+                  (("C-s" . swiper))) ; doesn't get replaced by counsel-mode
+#+END_SRC
+
+For some reason (counsel-mode 1) does not work inside ensure-package
+so I use it after it. It Switches regular emacs functions with their
+counsel counterparts.
+
+#+BEGIN_SRC emacs-lisp
+  (counsel-mode 1)
+#+END_SRC
+
+*** Enabling fuzzy searching - DISABLED
+Might wanna follow the instructions at [[https://oremacs.com/2016/01/06/ivy-flx/]]
+
+First we need to install flx.
+
+#+BEGIN_SRC emacs-lisp
+  ;(ensure-package flx)
+#+END_SRC
+
+Change the matcher to add wild card regex between each character
+
+#+BEGIN_SRC emacs-lisp
+    ;(setq ivy-re-builders-alist
+          ;'((ivy-switch-buffer . ivy--regex-fuzzy)))
+#+END_SRC
+
+** Rainbow mode
+Highlight color notations as the colors they represent.
+
+#+BEGIN_SRC emacs-lisp
+  (ensure-package rainbow-mode
+                  :config
+                  (add-hook 'org-mode-hook 'my-org-mode-hook))
+
+  (defun my-org-mode-hook ()
+    (rainbow-mode 1))
+#+END_SRC
+
+* Programming
+** General
+TODO - add comapny, flycheck etc.
+** Specific Languages
+*** Python
+*** Lisp
+**** Emacs Lisp
+*** C
+* Look and Feel
+** Menus and Bars
+Disable scrollbars and top menu
+
+#+BEGIN_SRC emacs-lisp
+  (menu-bar-mode -1)
+  (tool-bar-mode -1)
+  (scroll-bar-mode -1)
+#+END_SRC
+
+** Line highligting
+Enable current light highlighting.
+
+#+BEGIN_SRC emacs-lisp
+  (global-hl-line-mode 1)
+#+END_SRC
+
+it has a green color I don't like so I change it to a nicer color:
+
+#+BEGIN_SRC emacs-lisp
+  (defface my-hl-line
+    '((t :background "#21252c"))
+    "My face for highlighting current line.")
+
+  (setq hl-line-face 'my-hl-line)
+#+END_SRC
+
+Could replace color with #3f434b if I want a lighter one in the future.
+Reference: [[http://www.color-hex.com/color/2a2f38]]
+** Theme
+#+BEGIN_SRC emacs-lisp
+  (ensure-package arjen-grey-theme
+    :config
+    (load-theme 'arjen-grey t))
+#+END_SRC
+   
+** Powerline
+A customizable modeline using powerline.
+
+Define my own minimal powerline theme:
+On the left:
+- displays * on the left if the file has been modified since last save
+- displays file name
+- displays major mode 
+- displays 
+On the right:
+- displays the current column
+- displays the position of the part of the file that you're viewing
+
+#+BEGIN_SRC emacs-lisp
+  (ensure-package powerline
+                  :config
+                  (defun my-powerline-theme ()
+                    "Setup the default mode-line."
+                    (interactive)
+                    (setq-default mode-line-format
+                                  '("%e"
+                                    (:eval
+                                     (let* ((active (powerline-selected-window-active))
+                                            (mode-line-buffer-id (if active 'mode-line-buffer-id 'mode-line-buffer-id-inactive))
+                                            (mode-line (if active 'mode-line 'mode-line-inactive))
+                                            (face0 (if active 'powerline-active0 'powerline-inactive0))
+                                            (face1 (if active 'powerline-active1 'powerline-inactive1))
+                                            (face2 (if active 'powerline-active2 'powerline-inactive2))
+                                            (separator-left (intern (format "powerline-%s-%s"
+                                                                            (powerline-current-separator)
+                                                                            (car powerline-default-separator-dir))))
+                                            (separator-right (intern (format "powerline-%s-%s"
+                                                                             (powerline-current-separator)
+                                                                             (cdr powerline-default-separator-dir))))
+                                            (lhs (list (powerline-raw "%*" face0 'l)
+                                                       (powerline-buffer-id `(mode-line-buffer-id ,face0) 'l)
+                                                       (when (and (boundp 'which-func-mode) which-func-mode)
+                                                         (powerline-raw which-func-format face0 'l))
+                                                       (powerline-raw " " face0)
+                                                       (powerline-major-mode face0 'l)
+                                                       (powerline-process face1)
+                                                       (powerline-narrow face1 'l)
+                                                       (powerline-vc face2 'r)
+                                                       (when (bound-and-true-p nyan-mode)
+                                                         (powerline-raw (list (nyan-create)) face2 'l))))
+                                            (rhs (list (powerline-raw global-mode-string face2 'r)
+                                                       (unless window-system
+                                                         (powerline-raw (char-to-string #xe0a1) face1 'l))
+                                                       (powerline-raw "%3c" face0 'r)
+                                                       (powerline-raw " " face0)
+                                                       ;(powerline-raw "%6p" face0 'r)
+                                                       (when powerline-display-hud
+                                                         (powerline-hud face2 face0))
+                                                       (powerline-fill face0 0)
+                                                       )))
+                                       (concat (powerline-render lhs)
+                                               (powerline-fill face0 (powerline-width rhs))
+                                               (powerline-render rhs)))))))
+                  
+                  (my-powerline-theme))
+#+END_SRC
+
+** Font
+Hack font needs to be installed on your system first.
+
+#+BEGIN_SRC emacs-lisp
+  (set-default-font "Hack")
+#+END_SRC
+** Line Numbering
+Get hybrid (relative + absolute) line numbering for easy navigation using emacs.
+
+Install linum-relative and configure it for hybrid numbering instead of relative
+
+#+BEGIN_SRC emacs-lisp
+  (ensure-package linum-relative
+                  :init
+                  (setq linum-relative-current-symbol "") ; enables hybrid numbering
+                  :config
+                  (linum-relative-global-mode))
+#+END_SRC
