@@ -74,6 +74,54 @@ Install evil
                   :config (evil-mode 1))
 #+END_SRC
 
+** Leader key
+*** Installation and Setup
+Use "," as a leader key to execute various functions.
+
+#+BEGIN_SRC emacs-lisp
+      (ensure-package evil-leader
+                      :config
+                      (global-evil-leader-mode)
+                      (evil-leader/set-leader ","))
+#+END_SRC
+
+*** Leader related bindings
+**** f
+Open config file with <leader> f c
+
+#+BEGIN_SRC emacs-lisp
+  (defun open-config-file ()
+    """Opens the config file in the current buffer."
+    (interactive)
+    (find-file "~/.emacs.d/config.org"))
+
+  (evil-leader/set-key "f c" 'open-config-file)
+
+#+END_SRC
+
+call find-file with <leader> f f
+
+#+BEGIN_SRC emacs-lisp
+  (evil-leader/set-key "f f" 'find-file)
+#+END_SRC
+
+** Which-key
+Open up popup with available keys
+
+*** Install and Setup
+#+BEGIN_SRC emacs-lisp
+  (ensure-package which-key
+                  :config
+                  (which-key-mode))
+#+END_SRC
+    
+*** Customizations
+
+#+BEGIN_SRC emacs-lisp
+  (which-key-add-key-based-replacements
+    ", f" "files")
+#+END_SRC
+
 ** Ivy + Counsel + Swiper
 Completion for emacs
 *** Installation
@@ -126,12 +174,74 @@ Highlight color notations as the colors they represent.
     (rainbow-mode 1))
 #+END_SRC
 
+** EShell
+
+Define function to open shell bellow current window and focus it
+
+#+BEGIN_SRC emacs-lisp
+  (setq last-shell-window nil)
+
+  (defun open-shell-below-and-focus ()
+    "Opens the EShell below the current window and focuses it."
+    (interactive)
+    (if (window-live-p last-shell-window)
+        (select-window last-shell-window)
+      (progn
+        (setq last-shell-window (split-window-below))
+        (select-window last-shell-window)
+        (eshell))))
+#+END_SRC
+
+Bind the function to <leader> + "t"
+
+#+BEGIN_SRC emacs-lisp
+  (evil-leader/set-key
+   "t" 'open-shell-below-and-focus)
+#+END_SRC
+
+** Magit
+Git interface for emacs.
+
+#+BEGIN_SRC emacs-lisp
+  (ensure-package magit)
+#+END_SRC
+
+Open up magit with <leader> g
+
+#+BEGIN_SRC emacs-lisp
+  (evil-leader/set-key "g" 'magit)
+#+END_SRC
+
 * Programming
 ** General
-TODO - add comapny, flycheck etc.
+*** Auto Completion
+
+Install completion front end - company
+
+#+BEGIN_SRC emacs-lisp
+    (ensure-package company
+                    :config
+                    (add-hook 'after-init-hook 'global-company-mode)
+                    (setq company-idle-delay 0))
+#+END_SRC
+
+TODO - flycheck
+
 ** Specific Languages
 *** Python
 *** Lisp
+**** General
+***** Paredit
+Mode for editing of S-expressions.
+
+#+BEGIN_SRC emacs-lisp
+  (ensure-package paredit
+                  :config
+                  (add-hook 'emacs-lisp-mode-hook        'enable-paredit-mode)
+                  (add-hook 'lisp-mode-hook              'enable-paredit-mode)
+                  (add-hook 'lisp-interaction-mode-hook  'enable-paredit-mode)
+                  (add-hook 'scheme-lisp-mode-hook       'enable-paredit-mode))
+#+END_SRC
 **** Emacs Lisp
 *** C
 * Look and Feel
@@ -180,6 +290,7 @@ On the left:
 - displays major mode 
 - displays 
 On the right:
+- displays git information
 - displays the current column
 - displays the position of the part of the file that you're viewing
 
@@ -212,12 +323,12 @@ On the right:
                                                        (powerline-major-mode face0 'l)
                                                        (powerline-process face1)
                                                        (powerline-narrow face1 'l)
-                                                       (powerline-vc face2 'r)
                                                        (when (bound-and-true-p nyan-mode)
                                                          (powerline-raw (list (nyan-create)) face2 'l))))
                                             (rhs (list (powerline-raw global-mode-string face2 'r)
                                                        (unless window-system
                                                          (powerline-raw (char-to-string #xe0a1) face1 'l))
+                                                       (powerline-vc face2 'r)
                                                        (powerline-raw "%3c" face0 'r)
                                                        (powerline-raw " " face0)
                                                        ;(powerline-raw "%6p" face0 'r)
@@ -250,3 +361,4 @@ Install linum-relative and configure it for hybrid numbering instead of relative
                   :config
                   (linum-relative-global-mode))
 #+END_SRC
+ 
